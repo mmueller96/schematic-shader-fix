@@ -94,6 +94,12 @@ jobs:
             echo "labels=dependencies,needs-human" >> "$GITHUB_OUTPUT"
             STATUS="**The build still fails.** This needs a manual fix."
           fi
+          # gradle.properties alone only changes what the addon is compiled against, the released jar keeps
+          # working. Changed code or version ranges in fabric.mod.json need a new release.
+          if ! git diff --quiet -- src/; then
+            sed -i 's/^labels=.*/&,release-needed/' "$GITHUB_OUTPUT"
+            STATUS="$STATUS"$'\n\n'"This changes the addon code or its version ranges, so **a new release is needed** after merging."
+          fi
           printf '\n%s\n\n_Pull requests opened by this workflow do not trigger the Build workflow, the build above already ran._\n' "$STATUS" >> update-summary.md
 
       - name: Open pull request

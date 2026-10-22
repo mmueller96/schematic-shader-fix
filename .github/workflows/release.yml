@@ -1,0 +1,81 @@
+name: Release
+
+# Push a tag like v1.0.1+26.3 to build the jar, create a GitHub release and upload it to Modrinth.
+# The tag has to match mod_version and minecraft_version in gradle.properties.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check version
+        id: version
+        run: |
+          MOD=$(grep -Po '^mod_version\s*=\s*\K\S+' gradle.properties)
+          MC=$(grep -Po '^minecraft_version\s*=\s*\K\S+' gradle.properties)
+          VERSION="$MOD+$MC"
+
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match gradle.properties (expected v$VERSION)"
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$MC"; then
+            echo "::error::The tagged commit is not on branch $MC"
+            exit 1
+          fi
+
+          # The changelog section is everything between "## <mod_version>" and the next "## " heading
+          awk -v heading="## $MOD" '$0 == heading {found = 1; next} found && /^## / {exit} found' CHANGELOG.md > release-notes.md
+
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no section \"## $MOD\""
+            exit 1
+          fi
+
+          echo "mod=$MOD" >> "$GITHUB_OUTPUT"
+          echo "minecraft=$MC" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew build
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MOD: ${{ steps.version.outputs.mod }}
+          MC: ${{ steps.version.outputs.minecraft }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            PRERELEASE=$([[ "$MOD" == *-* ]] && echo --prerelease || true)
+            gh release create "$GITHUB_REF_NAME" build/libs/schematic-shader-fix-$MC-$MOD.jar \
+              build/libs/schematic-shader-fix-$MC-$MOD-sources.jar \
+              --title "Schematic Shader Fix $VERSION" --notes-file release-notes.md $PRERELEASE
+          fi
+
+      - name: Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MOD: ${{ steps.version.outputs.mod }}
+          MC: ${{ steps.version.outputs.minecraft }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python3 -I .github/scripts/publish-modrinth.py "build/libs/schematic-shader-fix-$MC-$MOD.jar" "$VERSION" "$MC" release-notes.md
