@@ -8,6 +8,14 @@ Unofficial client-side Fabric addon that fixes two rendering bugs of
 **This is not an official Litematica or MaLiLib project and is not affiliated with their authors.
 Please don't report issues with this addon to them.**
 
+## AI disclosure
+
+This addon was created with the help of generative AI. The code, the build and release automation,
+and the project description were written by [Claude](https://claude.com/claude-code) (Anthropic).
+The maintainer found and described the bugs, directed the work, and tested the fixes in-game.
+Dependency updates may also be prepared by Claude through GitHub Actions. Every change is reviewed
+and tested in-game by the maintainer before it is merged.
+
 ## Fixed issues
 
 1. **"Exploding" schematic blocks** – ghost blocks stretched into huge walls converging on a point.

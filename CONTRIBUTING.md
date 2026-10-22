@@ -10,6 +10,11 @@ that your contribution is licensed under the same terms.
 Please don't copy code from Litematica, MaLiLib or Iris into this project. They are licensed under
 LGPLv3, and this addon only references their classes through mixins.
 
+## AI usage
+
+This project is developed with the help of Claude (see the AI disclosure in the README). If you use
+generative AI for a contribution, say so in the pull request.
+
 ## Branches
 
 There is one branch per Minecraft version (e.g. `26.3`). Open your pull request against the branch of
