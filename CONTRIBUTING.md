@@ -38,6 +38,21 @@ in-game with a shader pack active:
 Mention the shader pack and all mod versions you tested with in the pull request, and add a
 screenshot if possible.
 
+## Releasing (maintainer)
+
+Releases are built and published by the `Release` workflow when a tag is pushed.
+
+1. In a pull request, raise `mod_version` in `gradle.properties` and add a `## <mod_version>` section
+   to `CHANGELOG.md`. Use patch versions (1.0.1) for fixes and new version ranges, minor versions
+   (1.1.0) for new fixes or features, and a `-beta.1` suffix for pre-releases.
+2. Merge it, then tag the merge commit on the Minecraft version branch:
+   `git tag v<mod_version>+<minecraft_version>` (e.g. `v1.0.1+26.3`) and `git push origin <tag>`.
+3. The workflow checks that the tag matches `gradle.properties`, builds the jar, creates the GitHub
+   release and uploads the version to Modrinth with the changelog section as release notes.
+
+Dependency updates that only change `gradle.properties` don't need a release. Pull requests of the
+update check that do need one get the `release-needed` label.
+
 ## Code style
 
 Match the existing code: tabs for indentation, braces on their own line, mixin members prefixed with
