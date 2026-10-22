@@ -1,0 +1,14 @@
+{
+    "required": true,
+    "package": "io.github.mmueller96.schematicshaderfix.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "minVersion": "0.8",
+    "client": [
+        "MixinBufferBuilderCache",
+        "MixinMaLiLibIrisCompat",
+        "MixinWorldRendererSchematic"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

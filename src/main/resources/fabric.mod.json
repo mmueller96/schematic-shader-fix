@@ -1,0 +1,26 @@
+{
+    "schemaVersion": 1,
+    "id": "schematic_shader_fix",
+    "name": "Schematic Shader Fix",
+    "version": "${mod_version}",
+    "description": "Unofficial addon that fixes schematic rendering of Litematica and the MaLiLib overlay lines while an Iris shader pack is active. Not affiliated with the Litematica or MaLiLib authors.",
+    "authors": [
+        "mmueller96"
+    ],
+    "contact": {
+        "sources": "https://github.com/mmueller96/schematic-shader-fix"
+    },
+    "license": "MIT",
+
+    "environment": "client",
+    "mixins": [
+        "schematicshaderfix.mixins.json"
+    ],
+
+    "depends": {
+        "minecraft": ">=26.3 <26.4",
+        "litematica": ">=0.29.1 <0.30",
+        "malilib": ">=0.30.2- <0.31",
+        "iris": ">=1.11.6- <1.12"
+    }
+}

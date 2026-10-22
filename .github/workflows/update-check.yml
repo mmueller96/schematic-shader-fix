@@ -1,0 +1,111 @@
+name: Dependency update check
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+concurrency:
+  group: update-check
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Modrinth for updates
+        id: check
+        run: python3 -I .github/scripts/check-updates.py
+
+      - name: Open issue for a new Minecraft version
+        if: steps.check.outputs.new_minecraft != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Litematica supports Minecraft ${{ steps.check.outputs.new_minecraft }}"
+        run: |
+          if ! gh issue list --state all --search "in:title \"$TITLE\"" --json title --jq '.[].title' | grep -qxF "$TITLE"; then
+            gh issue create --title "$TITLE" --body-file new-minecraft.md --label new-minecraft
+          fi
+          rm new-minecraft.md
+
+      - uses: actions/setup-java@v4
+        if: steps.check.outputs.updated == 'true'
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.check.outputs.updated == 'true'
+
+      - name: Build
+        id: build
+        if: steps.check.outputs.updated == 'true'
+        continue-on-error: true
+        run: |
+          chmod +x gradlew
+          ./gradlew build 2>&1 | tee build.log
+
+      - name: Let Claude fix the build
+        id: claude
+        if: steps.check.outputs.updated == 'true' && steps.build.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            The dependencies in gradle.properties were just updated (see update-summary.md), and
+            `./gradlew build` now fails. The build output is in build.log.
+
+            Follow CLAUDE.md. Find out what changed in the new Litematica, MaLiLib or Iris version
+            and fix the addon so that it builds and the two fixes still apply. Run `./gradlew build`
+            to verify. Do not commit, push or open a pull request, and do not create files other
+            than the ones you need to change.
+
+            When you are done, append a short section "## Changes by Claude" to update-summary.md
+            that explains what changed upstream and what you changed. If you could not fix it,
+            explain why in that section instead.
+          claude_args: >-
+            --max-turns 60
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(./gradlew:*),Bash(unzip:*),Bash(javap:*),Bash(find:*),Bash(ls:*),Bash(cat:*),Bash(grep:*)"
+
+      - name: Rebuild
+        id: rebuild
+        if: steps.claude.outcome != 'skipped'
+        continue-on-error: true
+        run: ./gradlew build
+
+      - name: Pick labels
+        id: labels
+        if: steps.check.outputs.updated == 'true'
+        run: |
+          rm -f build.log
+          if [ "${{ steps.build.outcome }}" = "success" ] || [ "${{ steps.rebuild.outcome }}" = "success" ]; then
+            echo "labels=dependencies,needs-ingame-test" >> "$GITHUB_OUTPUT"
+            STATUS="The build succeeds. **Test in-game with a shader pack before merging.**"
+          else
+            echo "labels=dependencies,needs-human" >> "$GITHUB_OUTPUT"
+            STATUS="**The build still fails.** This needs a manual fix."
+          fi
+          printf '\n%s\n\n_Pull requests opened by this workflow do not trigger the Build workflow, the build above already ran._\n' "$STATUS" >> update-summary.md
+
+      - name: Open pull request
+        if: steps.check.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: deps/${{ github.ref_name }}
+          commit-message: ${{ steps.check.outputs.title }}
+          title: ${{ steps.check.outputs.title }}
+          body-path: update-summary.md
+          labels: ${{ steps.labels.outputs.labels }}
+          add-paths: |
+            gradle.properties
+            src/**
+          delete-branch: true
