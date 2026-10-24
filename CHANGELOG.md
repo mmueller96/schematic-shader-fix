@@ -2,6 +2,14 @@
 
 Each section is used as the release notes of that version on GitHub and Modrinth.
 
+## 1.1.0
+
+- Fix water, stained glass and other translucent schematic blocks being invisible while an Iris
+  shader pack is active. Litematica's translucent pipelines now use the Iris terrain translucent
+  shader instead of the Sodium one, which expects a different vertex format.
+
+Requires Litematica 0.29.1+, MaLiLib 0.30.2+ and Iris 1.11.6+.
+
 ## 1.0.0
 
 First release for Minecraft 26.3.
