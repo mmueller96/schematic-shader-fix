@@ -1,6 +1,6 @@
 # Schematic Shader Fix
 
-Unofficial client-side Fabric addon that fixes two rendering bugs of
+Unofficial client-side Fabric addon that fixes three rendering bugs of
 [Litematica](https://github.com/sakura-ryoko/litematica) and
 [MaLiLib](https://github.com/sakura-ryoko/malilib) while an
 [Iris](https://github.com/IrisShaders/Iris) shader pack is active.
@@ -28,6 +28,11 @@ and tested in-game by the maintainer before it is merged.
    (plain GL lines in `POSITION_COLOR_LINE_WIDTH`) to the Iris `LINES` program. That shader expands
    lines using a per-vertex normal these pipelines don't have, which displaces the line endpoints.
    The addon maps them to the Iris `BASIC_COLOR` shader instead, which only needs position and color.
+3. **Invisible translucent schematic blocks** – water, stained glass and other translucent ghost
+   blocks don't show up at all. Litematica assigns its translucent pipelines to the Iris
+   `TRANSLUCENT` program, and Iris picks `SODIUM_TERRAIN_TRANSLUCENT` for them, a shader that expects
+   Sodium's compact vertex format. The addon maps them to the Iris `TERRAIN_TRANSLUCENT` shader instead,
+   which reads the extended `TERRAIN` format the schematic meshes are built in.
 
 ## Requirements
 

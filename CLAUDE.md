@@ -1,6 +1,6 @@
 # Schematic Shader Fix
 
-Client-side Fabric addon for Minecraft 26.3 that fixes two rendering bugs of Litematica and MaLiLib
+Client-side Fabric addon for Minecraft 26.3 that fixes three rendering bugs of Litematica and MaLiLib
 while an Iris shader pack is active. See README.md for the user-facing description and
 CONTRIBUTING.md for the contribution rules, which apply to you as well.
 
@@ -12,6 +12,9 @@ CONTRIBUTING.md for the contribution rules, which apply to you as well.
   `TERRAIN` vertex format while shaders are on (fixes stretched "exploding" schematic blocks)
 - `mixin/MixinWorldRendererSchematic.java`: Litematica `WorldRendererSchematic.setupTerrain` reloads
   all schematic renderers when the shader state changes
+- `mixin/MixinLitematicaIrisCompat.java`: redirects Litematica `IrisCompat.registerPipelines` calls of
+  `IrisApi.assignPipeline`, so the translucent pipelines use `ShaderKey.TERRAIN_TRANSLUCENT` instead
+  of `SODIUM_TERRAIN_TRANSLUCENT` (fixes invisible water and stained glass ghost blocks)
 - `mixin/MixinMaLiLibIrisCompat.java`: redirects MaLiLib `IrisCompat.registerPipelines` calls of
   `IrisApi.assignPipeline`, so debug line pipelines use `ShaderKey.BASIC_COLOR` instead of the
   `LINES` program (fixes diagonal "X" lines on the overlay)
@@ -34,9 +37,11 @@ When a mixin target or an Iris internal changed, inspect the new jars. Gradle do
 
 - Litematica: `fi.dy.masa.litematica.render.schematic.BufferBuilderCache` (`getBuilder`,
   `blockBufferBuilders`) and `WorldRendererSchematic` (`setupTerrain`, `loadRenderers`)
+- Litematica: `fi.dy.masa.litematica.compat.iris.IrisCompat.registerPipelines`
 - MaLiLib: `fi.dy.masa.malilib.compat.iris.IrisCompat.registerPipelines`
 - Iris: `net.irisshaders.iris.vertices.ImmediateState` (`isRenderingLevel`, `skipExtension`),
-  `net.irisshaders.iris.pipeline.IrisPipelines.assignPipeline`, `ShaderKey.BASIC_COLOR`
+  `net.irisshaders.iris.pipeline.IrisPipelines.assignPipeline`, `ShaderKey.BASIC_COLOR`,
+  `ShaderKey.TERRAIN_TRANSLUCENT`
 
 If upstream fixed one of the bugs itself, say so instead of patching around it.
 

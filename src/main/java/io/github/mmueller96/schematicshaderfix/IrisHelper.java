@@ -89,4 +89,25 @@ public final class IrisHelper
 
 		api.assignPipeline(pipeline, program);
 	}
+
+	/**
+	 * Litematica assigns its translucent terrain pipelines to the Iris TRANSLUCENT program. Iris then
+	 * looks for a shader by vertex format and alpha test, but these pipelines use the BLOCK format and
+	 * an alpha cutout of 0.1, so the only match is SODIUM_TERRAIN_TRANSLUCENT. That shader expects
+	 * Sodium's compact vertex format, so every translucent schematic block (water, stained glass, ...)
+	 * comes out invisible. Map them to TERRAIN_TRANSLUCENT instead, which reads the extended TERRAIN
+	 * format these meshes are built in. Every other pipeline is assigned as Litematica intended.
+	 */
+	public static void assignLitematicaPipeline(IrisApi api, RenderPipeline pipeline, IrisProgram program)
+	{
+		if (program == IrisProgram.TRANSLUCENT &&
+		    pipeline.getVertexFormatBinding(0).equals(DefaultVertexFormat.BLOCK))
+		{
+			LOGGER.debug("Assigning Litematica pipeline {} to TERRAIN_TRANSLUCENT", pipeline.getLocation());
+			IrisPipelines.assignPipeline(pipeline, ShaderKey.TERRAIN_TRANSLUCENT);
+			return;
+		}
+
+		api.assignPipeline(pipeline, program);
+	}
 }
