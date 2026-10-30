@@ -3,7 +3,8 @@
 Unofficial client-side Fabric addon that fixes three rendering bugs of
 [Litematica](https://github.com/sakura-ryoko/litematica) and
 [MaLiLib](https://github.com/sakura-ryoko/malilib) while an
-[Iris](https://github.com/IrisShaders/Iris) shader pack is active.
+[Iris](https://github.com/IrisShaders/Iris) shader pack is active, and a memory leak of Iris on
+dimension changes.
 
 **This is not an official Litematica or MaLiLib project and is not affiliated with their authors.
 Please don't report issues with this addon to them.**
@@ -33,6 +34,10 @@ and tested in-game by the maintainer before it is merged.
    `TRANSLUCENT` program, and Iris picks `SODIUM_TERRAIN_TRANSLUCENT` for them, a shader that expects
    Sodium's compact vertex format. The addon maps them to the Iris `TERRAIN_TRANSLUCENT` shader instead,
    which reads the extended `TERRAIN` format the schematic meshes are built in.
+4. **Memory leak on dimension changes** – RAM usage grows with every dimension change or shader
+   reload. Iris caches the pipelines it builds for its shader programs in a static map, keyed by the
+   program, and never clears it. The stale entries keep every destroyed Iris pipeline in memory,
+   plus one GL vertex array each. The addon clears that cache whenever Iris destroys its pipelines.
 
 ## Requirements
 

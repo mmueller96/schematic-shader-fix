@@ -18,6 +18,9 @@ CONTRIBUTING.md for the contribution rules, which apply to you as well.
 - `mixin/MixinMaLiLibIrisCompat.java`: redirects MaLiLib `IrisCompat.registerPipelines` calls of
   `IrisApi.assignPipeline`, so debug line pipelines use `ShaderKey.BASIC_COLOR` instead of the
   `LINES` program (fixes diagonal "X" lines on the overlay)
+- `mixin/MixinPipelineManager.java`: after Iris `PipelineManager.destroyPipeline` (dimension change,
+  shader reload) clears the Iris pipeline override cache `iris$overrides` that Iris' mixin adds to
+  `RenderSystem` and never clears (fixes a memory leak of whole destroyed Iris pipelines)
 - `gradle.properties`: dependency versions as Modrinth version IDs, updated by
   `.github/scripts/check-updates.py`
 - `src/main/resources/fabric.mod.json`: dependency version ranges
@@ -41,7 +44,8 @@ When a mixin target or an Iris internal changed, inspect the new jars. Gradle do
 - MaLiLib: `fi.dy.masa.malilib.compat.iris.IrisCompat.registerPipelines`
 - Iris: `net.irisshaders.iris.vertices.ImmediateState` (`isRenderingLevel`, `skipExtension`),
   `net.irisshaders.iris.pipeline.IrisPipelines.assignPipeline`, `ShaderKey.BASIC_COLOR`,
-  `ShaderKey.TERRAIN_TRANSLUCENT`
+  `ShaderKey.TERRAIN_TRANSLUCENT`, `PipelineManager.destroyPipeline`, and the static
+  `iris$overrides` field of `MixinShaderManager_Overrides` (merged into `RenderSystem`)
 
 If upstream fixed one of the bugs itself, say so instead of patching around it.
 

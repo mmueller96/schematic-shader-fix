@@ -2,6 +2,14 @@
 
 Each section is used as the release notes of that version on GitHub and Modrinth.
 
+## 1.2.0
+
+- Fix a memory leak on every dimension change and shader reload while an Iris shader pack is
+  active. Iris caches the pipelines of its shader programs and never clears that cache, so each
+  destroyed Iris pipeline stayed in memory. The cache is now cleared after Iris destroys a pipeline.
+
+Requires Litematica 0.29.1+, MaLiLib 0.30.2+ and Iris 1.11.6+.
+
 ## 1.1.0
 
 - Fix water, stained glass and other translucent schematic blocks being invisible while an Iris
