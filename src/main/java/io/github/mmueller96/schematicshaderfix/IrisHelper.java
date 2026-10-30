@@ -1,16 +1,22 @@
 package io.github.mmueller96.schematicshaderfix;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
+import com.mojang.renderpearl.backend.opengl.GlRenderPipeline;
+import com.mojang.renderpearl.frontend.FrontendRenderPipeline;
 import net.irisshaders.iris.api.v0.IrisApi;
 import net.irisshaders.iris.api.v0.IrisProgram;
 import net.irisshaders.iris.pipeline.IrisPipelines;
@@ -26,6 +32,9 @@ public final class IrisHelper
 	private static final Set<VertexFormat> COLORED_LINE_FORMATS = Set.of(DefaultVertexFormat.POSITION_COLOR,
 	                                                                     DefaultVertexFormat.POSITION_COLOR_LINE_WIDTH);
 	private static final Object EXTEND_LOCK = new Object();
+
+	private static boolean overrideCacheLookedUp;
+	private static Map<?, ?> overrideCache;
 
 	private IrisHelper() {}
 
@@ -109,5 +118,82 @@ public final class IrisHelper
 		}
 
 		api.assignPipeline(pipeline, program);
+	}
+
+	/**
+	 * Iris caches the pipelines it builds for its shader programs in a static map that it adds to
+	 * RenderSystem, keyed by the shader program, and never clears it. Every dimension change or shader
+	 * reload destroys all programs and compiles new ones, so the cache gains a full new set of entries
+	 * each time. The old entries keep their programs alive, and through them the whole destroyed Iris
+	 * pipeline, plus one GL vertex array each. Clear the cache after the pipelines are destroyed, the
+	 * entries for the new programs are created again on first use.
+	 */
+	public static void clearPipelineOverrideCache()
+	{
+		final Map<?, ?> cache = getPipelineOverrideCache();
+
+		if (cache == null)
+		{
+			return;
+		}
+
+		int count = 0;
+
+		// Layout: vanilla pipeline -> Iris program -> vertex formats -> pipeline
+		for (Object byProgram : cache.values())
+		{
+			for (Object byFormat : ((Map<?, ?>) byProgram).values())
+			{
+				for (Object pipeline : ((Map<?, ?>) byFormat).values())
+				{
+					// Only the vertex array belongs to the cached pipeline, the program is owned by Iris
+					if (pipeline instanceof FrontendRenderPipeline frontend &&
+					    frontend.backendRenderPipeline() instanceof GlRenderPipeline glPipeline)
+					{
+						glPipeline.vertexArray().close();
+					}
+
+					++count;
+				}
+			}
+		}
+
+		cache.clear();
+		LOGGER.debug("Cleared {} cached Iris pipeline overrides", count);
+	}
+
+	private static Map<?, ?> getPipelineOverrideCache()
+	{
+		if (!overrideCacheLookedUp)
+		{
+			overrideCacheLookedUp = true;
+
+			for (Field field : RenderSystem.class.getDeclaredFields())
+			{
+				if (Modifier.isStatic(field.getModifiers()) &&
+				    Map.class.isAssignableFrom(field.getType()) &&
+				    field.getName().contains("iris$overrides"))
+				{
+					try
+					{
+						field.setAccessible(true);
+						overrideCache = (Map<?, ?>) field.get(null);
+					}
+					catch (ReflectiveOperationException | RuntimeException e)
+					{
+						LOGGER.warn("Could not access the Iris pipeline override cache", e);
+					}
+
+					break;
+				}
+			}
+
+			if (overrideCache == null)
+			{
+				LOGGER.warn("Iris pipeline override cache not found, it won't be cleared on dimension changes");
+			}
+		}
+
+		return overrideCache;
 	}
 }
